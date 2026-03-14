@@ -1,0 +1,5 @@
+django>=4.0
+tensorflow
+opencv-python-headless
+mediapipe==0.10.7
+numpy
