@@ -3,5 +3,3 @@ tensorflow
 opencv-python-headless
 mediapipe==0.10.7
 numpy
-scikit-learn
-tqdm
