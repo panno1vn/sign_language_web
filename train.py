@@ -276,8 +276,47 @@ model.compile(
 
 
 # ── CALLBACKS ────────────────────────────────────────────────────────────────
+class QualityMonitorCallback(keras.callbacks.Callback):
+    """In một dòng nhận xét chất lượng sau mỗi epoch dựa trên val_accuracy và val_loss.
+
+    Ví dụ output:
+      [Epoch  5] val_acc= 62.4 % ⚠️  TRUNG BÌNH  |  val_loss=1.1200 ⚠️  CHẤP NHẬN ĐƯỢC
+      [Epoch 10] val_acc= 88.1 % ✅ XUẤT SẮC      |  val_loss=0.3450 ✅ TỐT
+    """
+
+    def on_epoch_end(self, epoch: int, logs: dict = None) -> None:
+        logs = logs or {}
+        # Only report when validation metrics are present (i.e. val_gen was provided).
+        # Falling back to training metrics would produce misleading "val_acc" labels.
+        if 'val_categorical_accuracy' not in logs:
+            return
+        acc  = logs['val_categorical_accuracy']
+        loss = logs.get('val_loss', float('inf'))
+
+        if acc >= ACC_EXCELLENT:
+            acc_tag = "✅ XUẤT SẮC   "
+        elif acc >= ACC_GOOD:
+            acc_tag = "⚠️  KHÁ TỐT   "
+        elif acc >= ACC_FAIR:
+            acc_tag = "⚠️  TRUNG BÌNH"
+        else:
+            acc_tag = "❌ CHƯA ĐẠT  "
+
+        if loss <= LOSS_GOOD:
+            loss_tag = "✅ TỐT"
+        elif loss <= LOSS_OK:
+            loss_tag = "⚠️  CHẤP NHẬN ĐƯỢC"
+        else:
+            loss_tag = "❌ CAO"
+
+        print(f"  [Epoch {epoch + 1:3d}]"
+              f"  val_acc={acc * 100:6.2f} %  {acc_tag}"
+              f"  |  val_loss={loss:.4f}  {loss_tag}")
+
+
 ckpt_path = os.path.join(WORKING_DIR, 'best_model.keras')
 callbacks = [
+    QualityMonitorCallback(),
     keras.callbacks.ModelCheckpoint(
         filepath=ckpt_path,
         monitor='val_categorical_accuracy',
