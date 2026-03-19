@@ -4,6 +4,7 @@
 # =============================================================================
 
 # ── THƯ VIỆN ─────────────────────────────────────────────────────────────────
+import math
 import os
 import json
 import zipfile
@@ -44,6 +45,11 @@ ACC_GOOD      = 0.70   # ≥ 70 % → khá tốt / chấp nhận được
 ACC_FAIR      = 0.50   # ≥ 50 % → trung bình
 LOSS_GOOD     = 0.50   # ≤ 0.5  → loss tốt
 LOSS_OK       = 1.50   # ≤ 1.5  → loss chấp nhận được
+
+# Số mẫu train tối thiểu trên mỗi lớp để mô hình có thể học được.
+# Dưới ngưỡng này model gần như chắc chắn không hội tụ.
+MIN_SAMPLES_PER_CLASS        = 5    # dưới mức này → cảnh báo nghiêm trọng
+RECOMMENDED_SAMPLES_PER_CLASS = 20  # khuyến nghị để model học tốt
 
 # ── TÌM ĐƯỜNG DẪN DATA TỰ ĐỘNG ───────────────────────────────────────────────
 # Script tự quét /kaggle/input để tìm thư mục npy_arrays (không cần sửa đường dẫn tay).
@@ -218,6 +224,64 @@ val_samples  = all_train[:n_val]
 train_samples = all_train[n_val:]
 print(f"✅ Train: {len(train_samples)}  |  Val: {len(val_samples)}  |  Test: {len(all_test)} mẫu")
 
+
+# ── KIỂM TRA ĐỦ DỮ LIỆU ─────────────────────────────────────────────────────
+def check_data_sufficiency(samples: list, num_classes: int) -> None:
+    """Kiểm tra liệu số mẫu trên mỗi lớp có đủ để mô hình học được không.
+
+    Lý do cần kiểm tra:
+    • loss ban đầu của mô hình ngẫu nhiên ≈ ln(num_classes).
+    • Nếu sau nhiều epoch loss vẫn gần giá trị này, nghĩa là mô hình đang
+      đoán mò – nguyên nhân số 1 là quá ít mẫu mỗi lớp.
+    • Cần ≥ MIN_SAMPLES_PER_CLASS mẫu/lớp để bắt đầu học;
+      ≥ RECOMMENDED_SAMPLES_PER_CLASS mẫu/lớp để học tốt.
+    """
+    counts: dict = {}
+    for *_, label in samples:
+        counts[label] = counts.get(label, 0) + 1
+
+    total          = len(samples)
+    avg_per_class  = total / max(num_classes, 1)
+    below_min      = sum(1 for c in counts.values() if c < MIN_SAMPLES_PER_CLASS)
+    missing        = num_classes - len(counts)      # lớp có 0 mẫu
+    random_loss    = math.log(max(num_classes, 1))  # loss khi đoán mò
+
+    sep = "=" * 65
+    print(f"\n{sep}")
+    print("📊  KIỂM TRA ĐỦ DỮ LIỆU TRƯỚC KHI TRAIN".center(65))
+    print(sep)
+    print(f"  Tổng số lớp          : {num_classes}")
+    print(f"  Tổng mẫu train       : {total:,}")
+    print(f"  Trung bình / lớp     : {avg_per_class:.1f} mẫu")
+    print(f"  Lớp < {MIN_SAMPLES_PER_CLASS!s:<2} mẫu        : {below_min + missing} / {num_classes}")
+    print(f"  Loss đoán ngẫu nhiên : ~{random_loss:.2f}  (= ln({num_classes}))")
+    print(f"  Loss cần đạt         : ≤ {LOSS_OK} (chấp nhận)  |  ≤ {LOSS_GOOD} (tốt)")
+    print("-" * 65)
+
+    if avg_per_class < MIN_SAMPLES_PER_CLASS:
+        needed_total = num_classes * RECOMMENDED_SAMPLES_PER_CLASS
+        max_classes  = total // RECOMMENDED_SAMPLES_PER_CLASS
+        print(f"  ❌  CẢNH BÁO NGHIÊM TRỌNG:")
+        print(f"      Trung bình chỉ {avg_per_class:.1f} mẫu/lớp – model gần như CHẮC CHẮN")
+        print(f"      sẽ KHÔNG HỘI TỤ và chỉ đoán mò (accuracy ≈ 0%).")
+        print(f"      Để giải quyết, chọn một trong hai:")
+        print(f"        1️⃣  Thu thập thêm data:")
+        print(f"            Cần tổng ~{needed_total:,} mẫu (= {num_classes} lớp × {RECOMMENDED_SAMPLES_PER_CLASS} mẫu/lớp)")
+        print(f"            (hiện tại còn thiếu ~{max(0, needed_total - total):,} mẫu)")
+        print(f"        2️⃣  Giảm số lớp xuống ≤ {max_classes}")
+        print(f"            (giữ lại các lớp có nhiều mẫu nhất)")
+    elif avg_per_class < RECOMMENDED_SAMPLES_PER_CLASS:
+        print(f"  ⚠️   CẢNH BÁO: chỉ có {avg_per_class:.1f} mẫu/lớp – thấp hơn khuyến nghị.")
+        print(f"      Model có thể học kém. Khuyến nghị ≥ {RECOMMENDED_SAMPLES_PER_CLASS} mẫu/lớp.")
+        print(f"      Cần thêm ~{max(0, num_classes * RECOMMENDED_SAMPLES_PER_CLASS - total):,} mẫu nữa.")
+    else:
+        print(f"  ✅  Số mẫu/lớp ổn ({avg_per_class:.1f} ≥ {RECOMMENDED_SAMPLES_PER_CLASS}).")
+
+    print(sep + "\n")
+
+
+check_data_sufficiency(train_samples, NUM_CLASSES)
+
 train_gen = SignSequenceGenerator(train_samples, words, F_AVG, FEATURE_DIM,
                                   batch_size=BATCH_SIZE, shuffle=True,  augment=True)
 val_gen   = SignSequenceGenerator(val_samples,   words, F_AVG, FEATURE_DIM,
@@ -279,10 +343,24 @@ model.compile(
 class QualityMonitorCallback(keras.callbacks.Callback):
     """In một dòng nhận xét chất lượng sau mỗi epoch dựa trên val_accuracy và val_loss.
 
+    Sau epoch thứ 5, nếu val_loss vẫn ≥ 90% của loss đoán ngẫu nhiên (= ln(NUM_CLASSES)),
+    tức là model chưa học được gì, callback sẽ in một cảnh báo chi tiết một lần.
+
     Ví dụ output:
-      [Epoch  5] val_acc= 62.4 % ⚠️  TRUNG BÌNH  |  val_loss=1.1200 ⚠️  CHẤP NHẬN ĐƯỢC
-      [Epoch 10] val_acc= 88.1 % ✅ XUẤT SẮC      |  val_loss=0.3450 ✅ TỐT
+      [Epoch  5] val_acc=  0.56 % ❌ CHƯA ĐẠT   |  val_loss=7.0610  ❌ CAO
+      ⚠️  CẢNH BÁO – MODEL KHÔNG HỌC ĐƯỢC SAU 5 EPOCH: ...
+      [Epoch 10] val_acc= 62.4 % ⚠️  TRUNG BÌNH  |  val_loss=1.1200 ⚠️  CHẤP NHẬN ĐƯỢC
+      [Epoch 20] val_acc= 88.1 % ✅ XUẤT SẮC      |  val_loss=0.3450 ✅ TỐT
     """
+
+    # Sau bao nhiêu epoch không cải thiện mới in cảnh báo "không học được"
+    _NOT_LEARNING_CHECK_EPOCH = 5
+
+    def __init__(self):
+        super().__init__()
+        # Loss kỳ vọng khi mô hình đoán đều tất cả các lớp = ln(NUM_CLASSES)
+        self._random_loss       = math.log(max(NUM_CLASSES, 1))
+        self._warned_not_learning = False
 
     def on_epoch_end(self, epoch: int, logs: dict = None) -> None:
         logs = logs or {}
@@ -312,6 +390,25 @@ class QualityMonitorCallback(keras.callbacks.Callback):
         print(f"  [Epoch {epoch + 1:3d}]"
               f"  val_acc={acc * 100:6.2f} %  {acc_tag}"
               f"  |  val_loss={loss:.4f}  {loss_tag}")
+
+        # ── Phát hiện mô hình không học được ──────────────────────────────
+        # Nếu sau N epoch val_loss vẫn ≥ 90% loss ngẫu nhiên → in cảnh báo một lần.
+        if (not self._warned_not_learning
+                and epoch + 1 >= self._NOT_LEARNING_CHECK_EPOCH
+                and loss >= self._random_loss * 0.90):
+            self._warned_not_learning = True
+            avg_spc = len(train_samples) / max(NUM_CLASSES, 1)
+            needed  = NUM_CLASSES * RECOMMENDED_SAMPLES_PER_CLASS
+            print(f"\n  ⚠️  CẢNH BÁO – MODEL KHÔNG HỌC ĐƯỢC SAU {epoch + 1} EPOCH:")
+            print(f"      val_loss={loss:.4f}  ≈  loss đoán ngẫu nhiên"
+                  f" ({self._random_loss:.2f} = ln({NUM_CLASSES}))")
+            print(f"      Model vẫn đang đoán mò! Nguyên nhân thường gặp:")
+            print(f"        1️⃣  Quá ít data: hiện ~{avg_spc:.1f} mẫu/lớp"
+                  f" (cần ≥ {RECOMMENDED_SAMPLES_PER_CLASS})")
+            print(f"            → Cần thêm ~{max(0, needed - len(train_samples)):,} mẫu,"
+                  f" hoặc giảm xuống ≤ {len(train_samples) // RECOMMENDED_SAMPLES_PER_CLASS} lớp")
+            print(f"        2️⃣  File .npy bị lỗi (NaN / toàn số 0 / sai shape)")
+            print(f"        3️⃣  label_map không khớp với tên thư mục\n")
 
 
 ckpt_path = os.path.join(WORKING_DIR, 'best_model.keras')
