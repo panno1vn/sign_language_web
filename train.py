@@ -51,6 +51,11 @@ LOSS_OK       = 1.50   # ≤ 1.5  → loss chấp nhận được
 MIN_SAMPLES_PER_CLASS        = 5    # dưới mức này → cảnh báo nghiêm trọng
 RECOMMENDED_SAMPLES_PER_CLASS = 20  # khuyến nghị để model học tốt
 
+# Số mẫu train tối thiểu để GIỮ một lớp (lọc tự động – Lựa chọn 2).
+# Các lớp có ÍT HƠN con số này trong tập train sẽ bị loại hoàn toàn.
+# • Đặt = 0 để tắt lọc (dùng toàn bộ từ vựng – không khuyến nghị khi ít data).
+FILTER_MIN_SAMPLES = RECOMMENDED_SAMPLES_PER_CLASS
+
 # ── TÌM ĐƯỜNG DẪN DATA TỰ ĐỘNG ───────────────────────────────────────────────
 # Script tự quét /kaggle/input để tìm thư mục npy_arrays (không cần sửa đường dẫn tay).
 master_data_path = ""
@@ -281,6 +286,72 @@ def check_data_sufficiency(samples: list, num_classes: int) -> None:
 
 
 check_data_sufficiency(train_samples, NUM_CLASSES)
+
+
+# ── LỌC LỚP TỰ ĐỘNG (LỰẠA CHỌN 2) ─────────────────────────────────────────
+def filter_top_classes(train_samp: list, val_samp: list, test_samp: list,
+                       current_words: np.ndarray, filter_min: int):
+    """Giữ lại chỉ những lớp có đủ ≥ filter_min mẫu trong tập train.
+
+    • Các lớp dưới ngưỡng bị loại khỏi train, val VÀ test.
+    • Nhãn được đánh lại về 0…K-1 (sắp xếp giảm dần theo số mẫu train).
+    • label_map.json được ghi lại tự động.
+
+    Trả về: (train_new, val_new, test_new, words_new, label_map_new, num_classes_new)
+    """
+    counts: dict = {}
+    for lh, rh, pose, lbl in train_samp:
+        counts[lbl] = counts.get(lbl, 0) + 1
+
+    kept = sorted(
+        [lbl for lbl, cnt in counts.items() if cnt >= filter_min],
+        key=lambda l: counts[l],
+        reverse=True,
+    )
+
+    if not kept:
+        max_cnt = max(counts.values(), default=0)
+        raise RuntimeError(
+            f"FILTER_MIN_SAMPLES={filter_min} quá cao – không còn lớp nào sau khi lọc!\n"
+            f"  Lớp có nhiều mẫu nhất chỉ có {max_cnt} mẫu train.\n"
+            f"  Hãy giảm FILTER_MIN_SAMPLES xuống ≤ {max_cnt}."
+        )
+
+    old_to_new = {old: new for new, old in enumerate(kept)}
+    kept_set   = frozenset(kept)
+
+    def _remap(samples):
+        return [(lh, rh, pose, old_to_new[lbl])
+                for lh, rh, pose, lbl in samples
+                if lbl in kept_set]
+
+    words_new = np.array([current_words[lbl] for lbl in kept])
+    lmap_new  = {w: i for i, w in enumerate(words_new)}
+    return _remap(train_samp), _remap(val_samp), _remap(test_samp), words_new, lmap_new, len(kept)
+
+
+if FILTER_MIN_SAMPLES > 0:
+    _sep = "=" * 65
+    print(f"\n{_sep}")
+    print(f"{'✂️   LỌC LỚP TỰ ĐỘNG  (FILTER_MIN_SAMPLES = ' + str(FILTER_MIN_SAMPLES) + ')':^65}")
+    print(_sep)
+    print(f"  Trước lọc : {NUM_CLASSES:,} lớp  |  {len(train_samples):,} mẫu train")
+    train_samples, val_samples, all_test, words, label_map, NUM_CLASSES = \
+        filter_top_classes(train_samples, val_samples, all_test, words, FILTER_MIN_SAMPLES)
+    _avg  = len(train_samples) / max(NUM_CLASSES, 1)
+    _rloss = math.log(max(NUM_CLASSES, 1))
+    print(f"  Sau lọc   : {NUM_CLASSES:,} lớp  |  {len(train_samples):,} mẫu train"
+          f"  |  {len(val_samples):,} val  |  {len(all_test):,} test")
+    print(f"  Trung bình / lớp   : {_avg:.1f} mẫu")
+    print(f"  Loss ngẫu nhiên    : ~{_rloss:.2f}  (= ln({NUM_CLASSES}))")
+    with open(os.path.join(WORKING_DIR, 'label_map.json'), 'w', encoding='utf-8') as f:
+        json.dump(label_map, f, ensure_ascii=False, indent=2)
+    print(f"  💾 label_map.json đã cập nhật ({NUM_CLASSES} từ)")
+    if _avg >= RECOMMENDED_SAMPLES_PER_CLASS:
+        print(f"  ✅ Dữ liệu sau lọc đủ điều kiện để model học tốt!")
+    else:
+        print(f"  ⚠️  Sau lọc vẫn chỉ {_avg:.1f} mẫu/lớp – cân nhắc tăng thêm data.")
+    print(_sep + "\n")
 
 train_gen = SignSequenceGenerator(train_samples, words, F_AVG, FEATURE_DIM,
                                   batch_size=BATCH_SIZE, shuffle=True,  augment=True)
