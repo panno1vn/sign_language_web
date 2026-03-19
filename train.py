@@ -18,6 +18,33 @@ VAL_RATIO   = 0.2   # tỉ lệ validation tách từ tập Train
 LR          = 0.001 # learning rate ban đầu
 WORKING_DIR = '/kaggle/working'   # thư mục lưu kết quả
 
+# ── NGƯỠNG CHẤT LƯỢNG MÔ HÌNH ────────────────────────────────────────────────
+#  Sau khi train xong, script tự động so sánh kết quả với các ngưỡng này:
+#
+#  categorical_accuracy (trên tập Test)
+#  ┌─────────────────────────────────────────────────────────────────────────┐
+#  │  ≥ 85 %  →  ✅  XUẤT SẮC   – model sẵn sàng deploy lên web            │
+#  │  70–85 % →  ⚠️  KHÁ TỐT   – dùng được, nên train thêm nếu có thể     │
+#  │  50–70 % →  ⚠️  TRUNG BÌNH – cần thêm data hoặc tăng số epoch         │
+#  │  < 50 %  →  ❌  CHƯA ĐẠT  – kiểm tra lại data/pipeline               │
+#  └─────────────────────────────────────────────────────────────────────────┘
+#
+#  loss (CategoricalCrossentropy + label_smoothing=0.1 nên loss không về 0)
+#  ┌─────────────────────────────────────────────────────────────────────────┐
+#  │  ≤ 0.5   →  ✅  TỐT                                                    │
+#  │  0.5–1.5 →  ⚠️  CHẤP NHẬN ĐƯỢC                                        │
+#  │  > 1.5   →  ❌  CAO – model chưa hội tụ tốt                            │
+#  └─────────────────────────────────────────────────────────────────────────┘
+#
+#  Lưu ý: đây là ngưỡng thực tế cho bài toán nhiều lớp (~100-2000 từ).
+#  Model dùng thực tế trên web nên đạt tối thiểu 70 % accuracy trên Test.
+
+ACC_EXCELLENT = 0.85   # ≥ 85 % → xuất sắc
+ACC_GOOD      = 0.70   # ≥ 70 % → khá tốt / chấp nhận được
+ACC_FAIR      = 0.50   # ≥ 50 % → trung bình
+LOSS_GOOD     = 0.50   # ≤ 0.5  → loss tốt
+LOSS_OK       = 1.50   # ≤ 1.5  → loss chấp nhận được
+
 # ── TÌM ĐƯỜNG DẪN DATA TỰ ĐỘNG ───────────────────────────────────────────────
 # Script tự quét /kaggle/input để tìm thư mục npy_arrays (không cần sửa đường dẫn tay).
 master_data_path = ""
@@ -284,9 +311,47 @@ history = model.fit(
 
 
 # ── ĐÁNH GIÁ ─────────────────────────────────────────────────────────────────
+def print_verdict(acc: float, loss: float) -> None:
+    """In kết quả đánh giá kèm nhận xét chất lượng dựa trên các ngưỡng đã định."""
+    sep = "=" * 60
+    print("\n" + sep)
+    print("📊  KẾT QUẢ ĐÁNH GIÁ TRÊN TẬP TEST".center(60))
+    print(sep)
+    print(f"  categorical_accuracy : {acc  * 100:.2f} %")
+    print(f"  loss                 : {loss:.4f}")
+    print("-" * 60)
+
+    # ── Nhận xét accuracy ──────────────────────────────────────────
+    if acc >= ACC_EXCELLENT:
+        acc_msg = "✅  XUẤT SẮC   – model sẵn sàng deploy lên web"
+    elif acc >= ACC_GOOD:
+        acc_msg = "⚠️   KHÁ TỐT   – dùng được, nên train thêm nếu có thể"
+    elif acc >= ACC_FAIR:
+        acc_msg = "⚠️   TRUNG BÌNH – cần thêm data hoặc tăng số epoch"
+    else:
+        acc_msg = "❌  CHƯA ĐẠT  – kiểm tra lại data / pipeline"
+
+    # ── Nhận xét loss ──────────────────────────────────────────────
+    if loss <= LOSS_GOOD:
+        loss_msg = "✅  TỐT"
+    elif loss <= LOSS_OK:
+        loss_msg = "⚠️   CHẤP NHẬN ĐƯỢC"
+    else:
+        loss_msg = "❌  CAO – model chưa hội tụ tốt"
+
+    print(f"  Accuracy : {acc_msg}")
+    print(f"  Loss     : {loss_msg}")
+    print("-" * 60)
+    print("  Ngưỡng tham khảo:")
+    print("    accuracy  ≥ 85 % → Xuất sắc  |  ≥ 70 % → Khá tốt  |  ≥ 50 % → Trung bình")
+    print("    loss      ≤ 0.5  → Tốt        |  ≤ 1.5  → Chấp nhận được")
+    print("    (loss dùng CategoricalCrossentropy + label_smoothing=0.1, không về 0)")
+    print("=" * 60 + "\n")
+
+
 print("\n📊 Đánh giá trên tập Test...")
 loss, acc = model.evaluate(test_gen, verbose=1)
-print(f"\n🎯 ĐỘ CHÍNH XÁC TEST: {acc * 100:.2f}%")
+print_verdict(acc, loss)
 
 
 # ── LƯU MÔ HÌNH ──────────────────────────────────────────────────────────────
