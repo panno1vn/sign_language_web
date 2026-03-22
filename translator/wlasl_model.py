@@ -15,7 +15,6 @@ Class list:
     A pre-built list is included in models/wlasl_class_list.txt.
 """
 import os
-import cv2
 import numpy as np
 import torch
 import torch.nn as nn
@@ -284,6 +283,7 @@ def load_rgb_frames(video_path, num_frames=64):
 
     Returns a float32 array of shape (T, H, W, 3) normalised to [-1, 1].
     """
+    import cv2
     cap = cv2.VideoCapture(video_path)
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     if total <= 0:
