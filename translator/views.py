@@ -2,7 +2,6 @@ import os
 import cv2
 import numpy as np
 import mediapipe as mp
-from concurrent.futures import ThreadPoolExecutor
 from django.shortcuts import render
 from django.core.files.storage import FileSystemStorage
 from django.http import JsonResponse
@@ -63,8 +62,7 @@ else:
     _labels_dict = {}
 
 # --- CẤU HÌNH MEDIAPIPE (Giữ nguyên từ Kaggle) ---
-filtered_hand = list(range(21))
-filtered_pose = [11, 12, 13, 14, 15, 16]
+# Danh sách các điểm face được lọc dùng khi huấn luyện
 filtered_face = [0, 4, 7, 8, 10, 13, 14, 17, 21, 33, 37, 39, 40, 46, 52, 53, 54, 55, 58, 61, 63, 65, 66, 67, 70, 78, 80,
                  81, 82, 84, 87, 88, 91, 93, 95, 103, 105, 107, 109, 127, 132, 133, 136, 144, 145, 146, 148, 149, 150,
                  152, 153, 154, 155, 157, 158, 159, 160, 161, 162, 163, 172, 173, 176, 178, 181, 185, 191, 234, 246,
@@ -73,82 +71,9 @@ filtered_face = [0, 4, 7, 8, 10, 13, 14, 17, 21, 33, 37, 39, 40, 46, 52, 53, 54,
                  378, 379, 380, 381, 382, 384, 385, 386, 387, 388, 389, 390, 397, 398, 400, 402, 405, 409, 415, 454,
                  466, 468, 473]
 
-HAND_NUM = len(filtered_hand)
-POSE_NUM = len(filtered_pose)
-FACE_NUM = len(filtered_face)
-NUM_LANDMARKS = HAND_NUM * 2 + POSE_NUM + FACE_NUM
-
-# Giữ nguyên các list này ở trên
-filtered_hand = list(range(21))
-filtered_pose = [11, 12, 13, 14, 15, 16]
-filtered_face = [0, 4, 7, 8, 10, 13, 14, 17, 21, 33, 37, 39, 40, 46, 52, 53, 54, 55, 58, 61, 63, 65, 66, 67, 70, 78, 80,
-                 81, 82, 84, 87, 88, 91, 93, 95, 103, 105, 107, 109, 127, 132, 133, 136, 144, 145, 146, 148, 149, 150,
-                 152, 153, 154, 155, 157, 158, 159, 160, 161, 162, 163, 172, 173, 176, 178, 181, 185, 191, 234, 246,
-                 249, 251, 263, 267, 269, 270, 276, 282, 283, 284, 285, 288, 291, 293, 295, 296, 297, 300, 308, 310,
-                 311, 312, 314, 317, 318, 321, 323, 324, 332, 334, 336, 338, 356, 361, 362, 365, 373, 374, 375, 377,
-                 378, 379, 380, 381, 382, 384, 385, 386, 387, 388, 389, 390, 397, 398, 400, 402, 405, 409, 415, 454,
-                 466, 468, 473]
-
-HAND_NUM = len(filtered_hand)
-POSE_NUM = len(filtered_pose)
-
-# TẠO RA BỘ CHỈ MỤC BỊ LỖI Y HỆT TRÊN KAGGLE ĐỂ ÉP MODEL HIỂU
+# Bộ chỉ mục tái tạo đúng cấu trúc dữ liệu đã dùng khi huấn luyện trên Kaggle
 BUGGY_INDICES = (
-        [x for x in filtered_hand] +
-        [x + HAND_NUM for x in filtered_hand] +
-        [x + HAND_NUM * 2 for x in filtered_pose] +
-        [x + HAND_NUM * 2 + POSE_NUM for x in filtered_face]  # Điểm mù gây ra lỗi
-)
-
-
-def get_frame_landmarks(frame, hands_mp, pose_mp, face_mesh_mp):
-    # 1. Khởi tạo mảng FULL 543 điểm của MediaPipe (giống cấu trúc V3)
-    full_landmarks = np.zeros((42 + 33 + 468, 3))
-
-    def get_hands(f):
-        results = hands_mp.process(f)
-        if results.multi_hand_landmarks:
-            for i, hand_landmarks in enumerate(results.multi_hand_landmarks):
-                # Lưu ý: Tay trái/phải trên web có thể bị ngược so với Dataset
-                if results.multi_handedness[i].classification[0].index == 0:
-                    full_landmarks[:21, :] = np.array([(lm.x, lm.y, lm.z) for lm in hand_landmarks.landmark])
-                else:
-                    full_landmarks[21:42, :] = np.array([(lm.x, lm.y, lm.z) for lm in hand_landmarks.landmark])
-
-    def get_pose(f):
-        results = pose_mp.process(f)
-        if results.pose_landmarks:
-            # Ghi vào đúng vị trí của Pose trong mảng 543
-            full_landmarks[42:75, :] = np.array([(lm.x, lm.y, lm.z) for lm in results.pose_landmarks.landmark])
-
-    def get_face(f):
-        results = face_mesh_mp.process(f)
-        if results.multi_face_landmarks:
-            # Ghi vào đúng vị trí của Face trong mảng 543
-            full_landmarks[75:, :] = np.array([(lm.x, lm.y, lm.z) for lm in results.multi_face_landmarks[0].landmark])
-
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        executor.submit(get_hands, frame)
-        executor.submit(get_pose, frame)
-        executor.submit(get_face, frame)
-
-    # 2. CẮT MẢNG THEO ĐÚNG CÔNG THỨC LỖI TRÊN KAGGLE (Kích thước sẽ ra đúng 180)
-    return full_landmarks[BUGGY_INDICES, :]
-
-
-# ... (Các thư viện và load model giữ nguyên)
-
-# TẠO LẠI ĐÚNG BỘ CHỈ MỤC LỖI TRÊN KAGGLE
-filtered_face = [0, 4, 7, 8, 10, 13, 14, 17, 21, 33, 37, 39, 40, 46, 52, 53, 54, 55, 58, 61, 63, 65, 66, 67, 70, 78, 80,
-                 81, 82, 84, 87, 88, 91, 93, 95, 103, 105, 107, 109, 127, 132, 133, 136, 144, 145, 146, 148, 149, 150,
-                 152, 153, 154, 155, 157, 158, 159, 160, 161, 162, 163, 172, 173, 176, 178, 181, 185, 191, 234, 246,
-                 249, 251, 263, 267, 269, 270, 276, 282, 283, 284, 285, 288, 291, 293, 295, 296, 297, 300, 308, 310,
-                 311, 312, 314, 317, 318, 321, 323, 324, 332, 334, 336, 338, 356, 361, 362, 365, 373, 374, 375, 377,
-                 378, 379, 380, 381, 382, 384, 385, 386, 387, 388, 389, 390, 397, 398, 400, 402, 405, 409, 415, 454,
-                 466, 468, 473]
-
-BUGGY_INDICES = (
-        [x for x in range(21)] +
+        list(range(21)) +
         [x + 21 for x in range(21)] +
         [x + 42 for x in [11, 12, 13, 14, 15, 16]] +
         [x + 48 for x in filtered_face]
