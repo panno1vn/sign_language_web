@@ -50,9 +50,21 @@ try:
             ACTIVE_MODEL = 'wlasl'
             print(f"[INFO] WLASL I3D model loaded: {_weights_name}  ({len(WLASL_LABELS)} classes)")
         else:
-            print("[INFO] No WLASL weights found in models/wlasl/ — falling back to local model.")
+            print(
+                "[INFO] No WLASL weights found in models/wlasl/\n"
+                "       ► Tải file .pth.tar tại: https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48\n"
+                f"       ► Đặt file vào thư mục: {WLASL_WEIGHTS_DIR}\n"
+                "       ► Ví dụ: models/wlasl/nslt_100.pth.tar  hoặc  models/wlasl/asl100/nslt_100.pth.tar\n"
+                "       Falling back to local model."
+            )
     else:
-        print("[INFO] models/wlasl/ directory not found — falling back to local model.")
+        print(
+            "[INFO] models/wlasl/ directory not found\n"
+            "       ► Tải file .pth.tar tại: https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48\n"
+            f"       ► Đặt file vào thư mục: {WLASL_WEIGHTS_DIR}\n"
+            "       ► Ví dụ: models/wlasl/nslt_100.pth.tar  hoặc  models/wlasl/asl100/nslt_100.pth.tar\n"
+            "       Falling back to local model."
+        )
 except Exception as _e:
     print(f"[WARNING] Could not load WLASL model: {_e}")
 
