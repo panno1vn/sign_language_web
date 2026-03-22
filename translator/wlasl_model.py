@@ -5,8 +5,8 @@ Pre-trained source: https://github.com/dxli94/WLASL
 
 Download pre-trained weights:
     https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48/view?usp=sharing
-    Extract and place the .pth.tar files under: models/wlasl/
-    Expected path (WLASL100): models/wlasl/nslt_100.pth.tar
+    Extract and place the .pth.tar (or .pth / .pt) files under: models/wlasl/
+    Expected path (WLASL100): models/wlasl/nslt_100.pth.tar  (or nslt_100.pt)
 
 Class list:
     The word list must match the order used during WLASL training.
@@ -331,7 +331,7 @@ def preprocess_video(video_path, num_frames=64):
 # ── Model Loading ─────────────────────────────────────────────────────────
 
 def load_wlasl_model(weights_path, num_classes):
-    """Load an I3D model from a WLASL .pth.tar checkpoint."""
+    """Load an I3D model from a WLASL checkpoint (.pth.tar, .pth, or .pt)."""
     model = InceptionI3d(num_classes=num_classes, in_channels=3)
     checkpoint = torch.load(weights_path, map_location='cpu')
     state_dict = checkpoint.get('model_state_dict', checkpoint)

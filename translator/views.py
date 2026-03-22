@@ -15,7 +15,7 @@ LABELS_DICT_PATH = os.path.join(BASE_DIR, 'models', 'labels.npz')
 # ── WLASL (I3D) model ────────────────────────────────────────────────────
 # Pre-trained weights from: https://github.com/dxli94/WLASL
 # Download: https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48
-# Place checkpoint at: models/wlasl/nslt_100.pth.tar  (or nslt_300.pth.tar, etc.)
+# Place checkpoint at: models/wlasl/nslt_100.pth.tar  (or nslt_100.pt, nslt_300.pth.tar, etc.)
 WLASL_WEIGHTS_DIR = os.path.join(BASE_DIR, 'models', 'wlasl')
 WLASL_CLASS_LIST_PATH = os.path.join(BASE_DIR, 'models', 'wlasl_class_list.txt')
 
@@ -33,7 +33,7 @@ try:
         _all_weights = []
         for _root, _dirs, _files in os.walk(WLASL_WEIGHTS_DIR):
             for _f in _files:
-                if _f.endswith('.pth.tar') or _f.endswith('.pth'):
+                if _f.endswith('.pth.tar') or _f.endswith('.pth') or _f.endswith('.pt'):
                     _all_weights.append(os.path.join(_root, _f))
         # Sort by the class count encoded in the filename (e.g. nslt_100 → 100).
         # Prefer the nslt_<N> pattern; fall back to the first digit run if absent.
@@ -52,17 +52,17 @@ try:
         else:
             print(
                 "[INFO] No WLASL weights found in models/wlasl/\n"
-                "       ► Tải file .pth.tar tại: https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48\n"
+                "       ► Tải file (.pth.tar, .pth, hoặc .pt) tại: https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48\n"
                 f"       ► Đặt file vào thư mục: {WLASL_WEIGHTS_DIR}\n"
-                "       ► Ví dụ: models/wlasl/nslt_100.pth.tar  hoặc  models/wlasl/asl100/nslt_100.pth.tar\n"
+                "       ► Ví dụ: models/wlasl/nslt_100.pth.tar  hoặc  models/wlasl/asl100/nslt_100.pt\n"
                 "       Falling back to local model."
             )
     else:
         print(
             "[INFO] models/wlasl/ directory not found\n"
-            "       ► Tải file .pth.tar tại: https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48\n"
+            "       ► Tải file (.pth.tar, .pth, hoặc .pt) tại: https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48\n"
             f"       ► Đặt file vào thư mục: {WLASL_WEIGHTS_DIR}\n"
-            "       ► Ví dụ: models/wlasl/nslt_100.pth.tar  hoặc  models/wlasl/asl100/nslt_100.pth.tar\n"
+            "       ► Ví dụ: models/wlasl/nslt_100.pth.tar  hoặc  models/wlasl/asl100/nslt_100.pt\n"
             "       Falling back to local model."
         )
 except Exception as _e:
@@ -215,7 +215,7 @@ def index(request):
 
             return JsonResponse({'status': 'error',
                                   'message': 'Chưa có model nào được tải. '
-                                             'Vui lòng tải file trọng số WLASL (.pth.tar) '
+                                             'Vui lòng tải file trọng số WLASL (.pth.tar / .pth / .pt) '
                                              'vào thư mục models/wlasl/ — xem hướng dẫn '
                                              'Bước 2 trong README.md.'})
 
