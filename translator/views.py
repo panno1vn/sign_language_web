@@ -203,8 +203,9 @@ def index(request):
 
             return JsonResponse({'status': 'error',
                                   'message': 'Chưa có model nào được tải. '
-                                             'Vui lòng tải file trọng số WLASL '
-                                             'vào thư mục models/wlasl/.'})
+                                             'Vui lòng tải file trọng số WLASL (.pth.tar) '
+                                             'vào thư mục models/wlasl/ — xem hướng dẫn '
+                                             'Bước 2 trong README.md.'})
 
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})

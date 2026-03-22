@@ -11,7 +11,8 @@ build/
 # Django
 *.sqlite3
 /staticfiles/
-/media/
+/media/*
+!/media/.gitkeep
 
 # Virtual environments
 venv/
