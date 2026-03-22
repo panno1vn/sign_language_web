@@ -8,63 +8,99 @@ Web app Django nhận dạng ngôn ngữ ký hiệu Mỹ (ASL) từ video camera
 - 📁 **Tải video lên** — hỗ trợ `.mp4`, `.webm`, `.avi`
 - 🤖 **Hai backend model:**
   - **WLASL I3D** (ưu tiên) — model PyTorch pre-trained từ [dxli94/WLASL](https://github.com/dxli94/WLASL), nhận dạng 100 ký hiệu ASL
-  - **Local TF/Keras** (fallback) — model TensorFlow/Keras huấn luyện sẵn
+  - **Local TF/Keras** (fallback) — model TensorFlow/Keras tự huấn luyện
 - 📊 **Top-3 kết quả** với thanh xác suất trực quan
 
 ---
 
-## Cài đặt & Chạy
+## 🚀 Chạy Demo Nhanh (5 bước)
 
-### Yêu cầu
-- Python 3.10+
-- Các thư viện trong `requirements.txt`
-
-### 1. Cài thư viện
+### Bước 1 — Clone repo và cài thư viện
 
 ```bash
+git clone https://github.com/panno1vn/sign_language_web.git
+cd sign_language_web
 pip install -r requirements.txt
 ```
 
-### 2. Tải trọng số model WLASL (bắt buộc để dùng model tốt nhất)
+### Bước 2 — Tải trọng số model WLASL
 
-1. Tải file từ Google Drive:  
-   **[WLASL pre-trained weights (.pth.tar)](https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48/view)**
+> **Đây là bước bắt buộc** — không có model thì app không dịch được.
 
-2. Giải nén — trong thư mục `I3D/archived/` sẽ có các file như `nslt_100.pth.tar`
+**Chọn 1 trong 2 cách:**
 
-3. Tạo thư mục và sao chép file vào đúng vị trí:
+#### Cách A: Dùng model WLASL I3D (pre-trained, khuyên dùng)
+
+1. Tải file `.pth.tar` từ Google Drive:  
+   👉 **[Tải WLASL pre-trained weights](https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48/view)**
+
+2. Giải nén — bên trong có thư mục `I3D/archived/` chứa file `nslt_100.pth.tar`
+
+3. Sao chép file vào đúng vị trí (thư mục `models/wlasl/` đã có sẵn trong repo):
 
 ```bash
-mkdir -p models/wlasl
-cp nslt_100.pth.tar models/wlasl/
+# Ví dụ nếu bạn giải nén vào thư mục Downloads:
+cp ~/Downloads/I3D/archived/nslt_100.pth.tar models/wlasl/
+
+# Hoặc trên Windows (PowerShell):
+# copy C:\Users\<tên>\Downloads\I3D\archived\nslt_100.pth.tar models\wlasl\
 ```
 
-> Nếu bạn không có file WLASL, server vẫn chạy được với model TF/Keras (`models/12-14.h5`) nếu file đó có mặt.
+**Kết quả mong đợi khi chạy server:**  
+`[INFO] WLASL I3D model loaded: nslt_100.pth.tar  (100 classes)`
 
-### 3. Migrate database
+#### Cách B: Dùng model TF/Keras tự huấn luyện
+
+Nếu bạn đã huấn luyện xong model trên Kaggle và có file `.h5`:
+
+```bash
+cp đường/dẫn/tới/model.h5 models/12-14.h5
+```
+
+**Kết quả mong đợi khi chạy server:**  
+`[INFO] Local TF/Keras model loaded.`
+
+### Bước 3 — Migrate database
 
 ```bash
 python manage.py migrate
 ```
 
-### 4. Chạy server
+### Bước 4 — Chạy server
 
 ```bash
 python manage.py runserver
 ```
 
+### Bước 5 — Mở trình duyệt
+
 Truy cập: **http://127.0.0.1:8000**
 
 ---
 
-## Chạy bằng Docker
+## 🐳 Chạy bằng Docker (tùy chọn)
 
 ```bash
-# Thêm file trọng số vào models/wlasl/ trước (xem bước 2 ở trên)
+# Đặt file model vào models/wlasl/ hoặc models/12-14.h5 trước (xem Bước 2)
 docker compose up --build
 ```
 
 Truy cập: **http://localhost:8000**
+
+---
+
+## ❓ Kiểm tra model đã nạp chưa
+
+Khi chạy `python manage.py runserver`, terminal sẽ in ra một trong các dòng sau:
+
+| Thông báo | Ý nghĩa |
+|-----------|---------|
+| `[INFO] WLASL I3D model loaded: nslt_100.pth.tar  (100 classes)` | ✅ WLASL model sẵn sàng |
+| `[INFO] Local TF/Keras model loaded.` | ✅ Model Keras sẵn sàng |
+| `[INFO] No WLASL weights found in models/wlasl/ — falling back to local model.` | ⚠️ Chưa có WLASL weights |
+| `[WARNING] Could not load local TF/Keras model: ...` | ⚠️ Chưa có file `.h5` |
+
+Nếu thấy cả hai cảnh báo, app vẫn chạy nhưng sẽ báo lỗi khi bạn gửi video. Hãy thực hiện Bước 2 trước.
 
 ---
 
@@ -80,9 +116,9 @@ sign_language_web/
 │   ├── wlasl_model.py    # Kiến trúc I3D + inference WLASL
 │   └── ...
 ├── models/
-│   ├── wlasl/            # ← Đặt file .pth.tar vào đây (tải thủ công)
+│   ├── wlasl/            # ← Đặt file nslt_100.pth.tar vào đây (Cách A)
 │   ├── wlasl_class_list.txt  # 100 nhãn ASL của WLASL100
-│   ├── 12-14.h5          # Model TF/Keras fallback (nếu có)
+│   ├── 12-14.h5          # ← Đặt model Keras vào đây (Cách B, không có trong repo)
 │   └── labels.npz        # Nhãn cho model TF/Keras
 ├── requirements.txt
 ├── Dockerfile
