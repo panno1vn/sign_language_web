@@ -34,13 +34,14 @@ try:
             for _f in _files:
                 if _f.endswith('.pth.tar') or _f.endswith('.pth'):
                     _all_weights.append(os.path.join(_root, _f))
-        # Sort by the leading integer in the filename (ascending) so the
-        # smallest-class checkpoint (e.g. nslt_100) is preferred over larger
-        # variants (nslt_300, nslt_1000).  Files with no digits sort first (0).
-        _candidates = sorted(
-            _all_weights,
-            key=lambda p: int(''.join(filter(str.isdigit, os.path.basename(p))) or '0')
-        )
+        import re as _re
+        # Sort by the class count encoded in the filename (e.g. nslt_100 → 100).
+        # Using an explicit regex avoids false matches from version suffixes or
+        # other numeric tokens in the path.
+        def _class_count(p):
+            m = _re.search(r'(\d+)', os.path.basename(p))
+            return int(m.group(1)) if m else 0
+        _candidates = sorted(_all_weights, key=_class_count)
         if _candidates:
             _weights_path = _candidates[0]
             _weights_name = os.path.relpath(_weights_path, WLASL_WEIGHTS_DIR)

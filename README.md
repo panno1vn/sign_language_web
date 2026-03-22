@@ -110,6 +110,59 @@ Truy cập: **http://localhost:8000**
 
 ---
 
+## 💻 Chạy bằng Visual Studio Code
+
+Repo đã có sẵn cấu hình VS Code trong thư mục `.vscode/`.
+
+### Bước 1 — Mở thư mục repo trong VS Code
+
+```
+File → Open Folder → chọn thư mục sign_language_web
+```
+
+### Bước 2 — Tạo và kích hoạt môi trường ảo, cài thư viện
+
+Mở terminal trong VS Code (**Ctrl+`**) rồi chạy:
+
+```powershell
+# Tạo venv
+python -m venv venv
+
+# Kích hoạt (chọn đúng shell đang dùng):
+.\venv\Scripts\Activate.ps1        # PowerShell
+# venv\Scripts\activate.bat        # Command Prompt (CMD)
+# source venv/Scripts/activate     # Git Bash / WSL
+
+# Cài thư viện
+pip install -r requirements.txt
+```
+
+> Nếu PowerShell báo lỗi policy khi activate, chạy:  
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+
+### Bước 3 — Chọn Python interpreter đúng
+
+Nhấn **Ctrl+Shift+P** → gõ `Python: Select Interpreter` → chọn `./venv/Scripts/python.exe`
+
+### Bước 4 — Migrate database (chỉ lần đầu)
+
+Trong terminal VS Code:
+
+```bash
+python manage.py migrate
+```
+
+### Bước 5 — Nhấn F5 để chạy server có debug
+
+- Chọn cấu hình **"Django: runserver"** ở thanh Run & Debug (Ctrl+Shift+D)
+- Nhấn **F5** (hoặc nút ▶ màu xanh)
+- VS Code sẽ khởi động server tại **http://127.0.0.1:8000**
+- Bạn có thể đặt **breakpoint** bằng cách click vào lề trái của file `.py`
+
+> **Ghi chú:** Lần đầu VS Code có thể hỏi cài extension **Python** và **Pylance** — hãy chấp nhận cài.
+
+---
+
 ## ❓ Kiểm tra model đã nạp chưa
 
 Khi chạy `python manage.py runserver`, terminal sẽ in ra một trong các dòng sau:

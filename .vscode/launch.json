@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Django: runserver",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/manage.py",
+            "args": ["runserver"],
+            "django": true,
+            "autoStartBrowser": false,
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "config.settings"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Django: runserver 0.0.0.0:8000",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/manage.py",
+            "args": ["runserver", "0.0.0.0:8000"],
+            "django": true,
+            "autoStartBrowser": false,
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "config.settings"
+            },
+            "console": "integratedTerminal"
+        }
+    ]
+}
