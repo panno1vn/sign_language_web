@@ -1,4 +1,5 @@
 import os
+import re
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -34,12 +35,11 @@ try:
             for _f in _files:
                 if _f.endswith('.pth.tar') or _f.endswith('.pth'):
                     _all_weights.append(os.path.join(_root, _f))
-        import re as _re
         # Sort by the class count encoded in the filename (e.g. nslt_100 → 100).
-        # Using an explicit regex avoids false matches from version suffixes or
-        # other numeric tokens in the path.
+        # Prefer the nslt_<N> pattern; fall back to the first digit run if absent.
         def _class_count(p):
-            m = _re.search(r'(\d+)', os.path.basename(p))
+            name = os.path.basename(p)
+            m = re.search(r'nslt_(\d+)', name) or re.search(r'(\d+)', name)
             return int(m.group(1)) if m else 0
         _candidates = sorted(_all_weights, key=_class_count)
         if _candidates:

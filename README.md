@@ -13,6 +13,35 @@ Web app Django nhận dạng ngôn ngữ ký hiệu Mỹ (ASL) từ video camera
 
 ---
 
+## ⬇️ Tải / Cập nhật code mới nhất
+
+### Lần đầu — chưa có code trên máy
+
+```bash
+git clone https://github.com/panno1vn/sign_language_web.git
+cd sign_language_web
+```
+
+> Nếu chưa cài Git: tải tại **https://git-scm.com/downloads**, cài xong mở lại terminal.
+
+### Đã có code rồi — muốn lấy bản mới nhất từ GitHub
+
+Mở terminal (hoặc terminal trong VS Code) **bên trong thư mục `sign_language_web`** rồi chạy:
+
+```bash
+git pull
+```
+
+Lệnh này tự động tải về tất cả thay đổi mới nhất và cập nhật vào máy bạn.
+
+> ⚠️ Nếu bạn có sửa file nào đó và Git báo xung đột, chạy lệnh sau để bỏ thay đổi cục bộ và lấy đúng bản trên GitHub:
+> ```bash
+> git fetch origin
+> git reset --hard origin/main
+> ```
+
+---
+
 ## 🚀 Chạy Demo Nhanh (5 bước)
 
 ### Bước 1 — Clone repo và cài thư viện
