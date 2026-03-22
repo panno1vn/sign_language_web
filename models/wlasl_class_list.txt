@@ -1,0 +1,114 @@
+# WLASL100 class list — 100 most frequent ASL glosses in WLASL.
+#
+# IMPORTANT: The order of these labels must exactly match the class indices
+# used when the pre-trained checkpoint was created.  If predictions look
+# wrong, regenerate this file from the WLASL repository:
+#
+#   1. Clone https://github.com/dxli94/WLASL
+#   2. Open code/train_test_split/nslt_100.json
+#   3. Extract the "action_class" mapping (integer → gloss string) and sort
+#      by integer key to get the correct order.
+#
+# The list below is the canonical WLASL100 order as published with the
+# pre-trained weights at:
+#   https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48
+book
+drink
+computer
+before
+chair
+go
+clothes
+who
+candy
+cousin
+deaf
+fine
+help
+later
+make
+many
+mother
+no
+now
+orange
+pay
+pizza
+play
+school
+secretary
+son
+steal
+student
+table
+thanksgiving
+walk
+what
+white
+you
+accident
+apple
+basketball
+bird
+birthday
+black
+blue
+bowling
+bread
+brother
+brown
+but
+cabinet
+calculate
+care
+cash
+change
+check
+come
+cool
+daily
+daughter
+decide
+design
+doctor
+dog
+drive
+dry
+eat
+fall
+far
+fish
+flower
+food
+give
+graduate
+happy
+hat
+have
+house
+husband
+ice cream
+keep
+know
+language
+leave
+like
+live
+look
+lose
+movie
+need
+number
+phone
+pink
+police
+public
+purple
+right
+road
+run
+sad
+same
+share
+woman
+write

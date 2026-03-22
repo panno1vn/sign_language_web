@@ -1,7 +1,6 @@
 import os
 import cv2
 import numpy as np
-import tensorflow as tf
 import mediapipe as mp
 from concurrent.futures import ThreadPoolExecutor
 from django.shortcuts import render
@@ -13,15 +12,55 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, 'models', '12-14.h5')
 LABELS_DICT_PATH = os.path.join(BASE_DIR, 'models', 'labels.npz')
 
-# Tải Model
-model = tf.keras.models.load_model(MODEL_PATH)
+# ── WLASL (I3D) model ────────────────────────────────────────────────────
+# Pre-trained weights from: https://github.com/dxli94/WLASL
+# Download: https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48
+# Place checkpoint at: models/wlasl/nslt_100.pth.tar  (or nslt_300.pth.tar, etc.)
+WLASL_WEIGHTS_DIR = os.path.join(BASE_DIR, 'models', 'wlasl')
+WLASL_CLASS_LIST_PATH = os.path.join(BASE_DIR, 'models', 'wlasl_class_list.txt')
 
-# Tải Từ điển FastText Vector
+WLASL_MODEL = None
+WLASL_LABELS = None
+ACTIVE_MODEL = 'none'
+
+# Try to load the WLASL I3D model (requires weights to be downloaded separately)
 try:
-    LABELS_DICT = np.load(LABELS_DICT_PATH, allow_pickle=True)
-except FileNotFoundError:
-    print("!!! LỖI: Chưa tìm thấy file labels.npz trong thư mục models !!!")
-    LABELS_DICT = {}
+    from translator.wlasl_model import load_wlasl_model, load_class_list, predict_wlasl
+
+    if os.path.isdir(WLASL_WEIGHTS_DIR):
+        _candidates = sorted(
+            [f for f in os.listdir(WLASL_WEIGHTS_DIR) if f.endswith('.pth.tar') or f.endswith('.pth')],
+            key=lambda f: int(''.join(filter(str.isdigit, f)) or '0')
+        )
+        if _candidates:
+            _weights_path = os.path.join(WLASL_WEIGHTS_DIR, _candidates[0])
+            WLASL_LABELS = load_class_list(WLASL_CLASS_LIST_PATH)
+            WLASL_MODEL = load_wlasl_model(_weights_path, num_classes=len(WLASL_LABELS))
+            ACTIVE_MODEL = 'wlasl'
+            print(f"[INFO] WLASL I3D model loaded: {_candidates[0]}  ({len(WLASL_LABELS)} classes)")
+        else:
+            print("[INFO] No WLASL weights found in models/wlasl/ — falling back to local model.")
+    else:
+        print("[INFO] models/wlasl/ directory not found — falling back to local model.")
+except Exception as _e:
+    print(f"[WARNING] Could not load WLASL model: {_e}")
+
+# ── Fallback: existing TensorFlow / Keras model ──────────────────────────
+if ACTIVE_MODEL == 'none':
+    try:
+        import tensorflow as tf
+
+        _tf_model = tf.keras.models.load_model(MODEL_PATH)
+        _labels_dict = np.load(LABELS_DICT_PATH, allow_pickle=True)
+        ACTIVE_MODEL = 'local'
+        print("[INFO] Local TF/Keras model loaded.")
+    except Exception as _e:
+        _tf_model = None
+        _labels_dict = {}
+        print(f"[WARNING] Could not load local TF/Keras model: {_e}")
+else:
+    _tf_model = None
+    _labels_dict = {}
 
 # --- CẤU HÌNH MEDIAPIPE (Giữ nguyên từ Kaggle) ---
 filtered_hand = list(range(21))
@@ -186,24 +225,49 @@ def index(request):
         uploaded_file_url = fs.path(filename)
 
         try:
-            features = extract_features_from_video(uploaded_file_url)
+            # ── WLASL I3D model path ──────────────────────────────────────
+            if ACTIVE_MODEL == 'wlasl':
+                results = predict_wlasl(WLASL_MODEL, uploaded_file_url, WLASL_LABELS)
+                if results is None:
+                    return JsonResponse({'status': 'error',
+                                         'message': 'Không thể đọc video.'})
+                top_label, top_prob = results[0]
+                top3 = [{'label': lbl, 'prob': round(prob * 100, 1)}
+                        for lbl, prob in results]
+                return JsonResponse({
+                    'status': 'success',
+                    'result': top_label,
+                    'confidence': round(top_prob * 100, 1),
+                    'top3': top3,
+                    'model': 'WLASL I3D',
+                })
 
-            # 1. Model nhả ra vector 300 chiều
-            prediction_vector = model.predict(features)[0]
+            # ── Local TF/Keras model path ─────────────────────────────────
+            if ACTIVE_MODEL == 'local' and _tf_model is not None:
+                features = extract_features_from_video(uploaded_file_url)
+                prediction_vector = _tf_model.predict(features)[0]
 
-            best_label = "Không xác định"
-            max_similarity = -1.0  # Cosine Similarity chạy từ -1 đến 1
+                best_label = "Không xác định"
+                max_similarity = -1.0
+                for label in _labels_dict.keys():
+                    sim = cosine_similarity(prediction_vector, _labels_dict[label])
+                    if sim > max_similarity:
+                        max_similarity = sim
+                        best_label = label
 
-            # 2. Duyệt qua file npz để tìm từ có Vector giống với Model nhất
-            for label in LABELS_DICT.keys():
-                word_vector = LABELS_DICT[label]
-                sim_score = cosine_similarity(prediction_vector, word_vector)
+                return JsonResponse({
+                    'status': 'success',
+                    'result': best_label,
+                    'confidence': round(float(max_similarity) * 100, 1),
+                    'top3': [{'label': best_label,
+                               'prob': round(float(max_similarity) * 100, 1)}],
+                    'model': 'Local (TF/Keras)',
+                })
 
-                if sim_score > max_similarity:
-                    max_similarity = sim_score
-                    best_label = label
-
-            return JsonResponse({'status': 'success', 'result': f"{best_label}"})
+            return JsonResponse({'status': 'error',
+                                  'message': 'Chưa có model nào được tải. '
+                                             'Vui lòng tải file trọng số WLASL '
+                                             'vào thư mục models/wlasl/.'})
 
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
@@ -211,5 +275,4 @@ def index(request):
             if os.path.exists(uploaded_file_url):
                 os.remove(uploaded_file_url)
 
-    # Đã sửa lại đường dẫn cho chuẩn với ảnh của bạn
-    return render(request, 'index.html')
+    return render(request, 'index.html', {'active_model': ACTIVE_MODEL})

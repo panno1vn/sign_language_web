@@ -5,24 +5,35 @@
     <title>Dịch Ngôn Ngữ Ký Hiệu AI</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f0f2f5; margin: 0; padding: 20px; }
-        .container { max-width: 650px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        .container { max-width: 700px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; margin-bottom: 20px; }
 
-        /* CSS cho 2 nút Tab */
+        /* Model badge */
+        .model-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 18px; }
+        .model-badge.wlasl  { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .model-badge.local  { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+        .model-badge.none   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* Setup guide */
+        .setup-guide { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 16px; margin-bottom: 20px; text-align: left; font-size: 14px; }
+        .setup-guide h3 { margin: 0 0 10px; color: #495057; font-size: 15px; }
+        .setup-guide ol { margin: 0; padding-left: 20px; }
+        .setup-guide li { margin-bottom: 6px; }
+        .setup-guide code { background: #e9ecef; padding: 2px 5px; border-radius: 3px; font-size: 12px; }
+        .setup-guide a { color: #007bff; }
+
+        /* Tabs */
         .tab-container { display: flex; justify-content: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
         .tab-btn { background: none; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; color: #7f8c8d; cursor: pointer; transition: 0.3s; border-bottom: 3px solid transparent; }
         .tab-btn.active { color: #007bff; border-bottom: 3px solid #007bff; }
         .tab-btn:hover { color: #0056b3; }
 
-        /* Nội dung các Tab */
         .tab-content { display: none; padding: 20px 0; }
         .tab-content.active { display: block; }
 
-        /* Camera & Video box */
-        video { width: 100%; max-width: 500px; border-radius: 8px; background: #000; transform: scaleX(-1); } /* Lật gương camera */
+        video { width: 100%; max-width: 500px; border-radius: 8px; background: #000; transform: scaleX(-1); }
         .upload-box { padding: 30px; border: 2px dashed #007bff; border-radius: 8px; background: #f8fbff; }
 
-        /* Nút bấm chung */
         button.action-btn { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; transition: 0.3s; margin-top: 15px;}
         button.action-btn:hover { background: #0056b3; }
         button.action-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
@@ -30,12 +41,51 @@
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
-        #resultText { color: #27ae60; font-size: 28px; margin-top: 30px; min-height: 40px; font-weight: bold;}
+        /* Results */
+        #resultText { color: #27ae60; font-size: 28px; margin-top: 30px; min-height: 40px; font-weight: bold; }
+        .result-meta { font-size: 13px; color: #6c757d; margin-top: 4px; }
+        .top3-table { margin: 12px auto 0; border-collapse: collapse; width: 280px; }
+        .top3-table th { font-size: 12px; color: #6c757d; padding: 4px 8px; border-bottom: 1px solid #dee2e6; }
+        .top3-table td { font-size: 14px; padding: 4px 8px; }
+        .top3-table tr:first-child td { font-weight: bold; }
+        .prob-bar { height: 8px; border-radius: 4px; background: #007bff; display: inline-block; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Phần Mềm Dịch Ngôn Ngữ Ký Hiệu</h1>
+
+        <!-- Model status badge -->
+        {% if active_model == 'wlasl' %}
+            <span class="model-badge wlasl">✅ Model: WLASL I3D (dxli94/WLASL)</span>
+        {% elif active_model == 'local' %}
+            <span class="model-badge local">⚠️ Model: Local TF/Keras (WLASL chưa được tải)</span>
+        {% else %}
+            <span class="model-badge none">❌ Chưa có model — xem hướng dẫn bên dưới</span>
+        {% endif %}
+
+        <!-- WLASL setup guide (shown when weights are missing) -->
+        {% if active_model != 'wlasl' %}
+        <div class="setup-guide">
+            <h3>📥 Cách tích hợp model WLASL (dxli94/WLASL)</h3>
+            <ol>
+                <li>Tải file trọng số đã huấn luyện từ Google Drive:<br>
+                    <a href="https://drive.google.com/file/d/1jALimVOB69ifYkeT0Pe297S1z4U3jC48/view" target="_blank">
+                        WLASL pre-trained weights (.pth.tar)
+                    </a>
+                </li>
+                <li>Giải nén — bạn sẽ thấy thư mục <code>I3D/archived/</code> chứa các file <code>nslt_100.pth.tar</code>, v.v.</li>
+                <li>Tạo thư mục <code>models/wlasl/</code> trong project và sao chép file <code>.pth.tar</code> vào đó:
+                    <br><code>mkdir -p models/wlasl && cp nslt_100.pth.tar models/wlasl/</code>
+                </li>
+                <li>Khởi động lại server: <code>python manage.py runserver</code></li>
+            </ol>
+            <p style="margin:8px 0 0; font-size:13px; color:#6c757d;">
+                Nguồn: <a href="https://github.com/dxli94/WLASL" target="_blank">github.com/dxli94/WLASL</a>
+                &nbsp;·&nbsp; Tham khảo <code>models/wlasl_class_list.txt</code> để xem danh sách 100 ký hiệu được nhận diện.
+            </p>
+        </div>
+        {% endif %}
 
         <div class="tab-container">
             <button class="tab-btn active" onclick="switchTab('cameraTab', this)">📹 Dùng Camera</button>
@@ -57,6 +107,10 @@
         </div>
 
         <h2 id="resultText">Hãy múa hoặc tải video lên!</h2>
+        <div class="result-meta" id="resultMeta"></div>
+        <table class="top3-table" id="top3Table" style="display:none">
+            <tr><th>Ký hiệu</th><th>Xác suất</th><th></th></tr>
+        </table>
     </div>
 
     <script>
@@ -69,9 +123,11 @@
         }
 
         const resultText = document.getElementById('resultText');
+        const resultMeta = document.getElementById('resultMeta');
+        const top3Table  = document.getElementById('top3Table');
 
-        // --- 2. LOGIC TẢI VIDEO LÊN (Giữ nguyên) ---
-        const uploadBtn = document.getElementById('uploadBtn');
+        // --- 2. LOGIC TẢI VIDEO LÊN ---
+        const uploadBtn  = document.getElementById('uploadBtn');
         const videoInput = document.getElementById('videoInput');
 
         uploadBtn.addEventListener('click', () => {
@@ -81,19 +137,17 @@
         });
 
         // --- 3. LOGIC QUAY CAMERA ---
-        const webcam = document.getElementById('webcam');
+        const webcam    = document.getElementById('webcam');
         const recordBtn = document.getElementById('recordBtn');
         let mediaRecorder;
         let recordedChunks = [];
 
-        // Khởi động Camera ngay khi vào trang
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => { webcam.srcObject = stream; })
             .catch(err => { console.error("Lỗi mở camera:", err); alert("Không thể mở Camera!"); });
 
         recordBtn.addEventListener('click', () => {
             if (recordBtn.disabled) return;
-
             recordedChunks = [];
             const stream = webcam.srcObject;
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
@@ -103,56 +157,66 @@
             };
 
             mediaRecorder.onstop = () => {
-                // Tạo file từ video vừa quay
                 const blob = new Blob(recordedChunks, { type: 'video/webm' });
                 const file = new File([blob], "camera_record.webm", { type: 'video/webm' });
-
-                // Gửi lên server y như tải file
                 sendVideoToServer(file);
-
-                // Reset giao diện nút bấm
                 recordBtn.innerText = "🔴 Bắt đầu múa (Ghi 3 giây)";
                 recordBtn.classList.remove('recording');
                 recordBtn.disabled = false;
             };
 
-            // Bắt đầu ghi hình
             mediaRecorder.start();
             recordBtn.innerText = "⏳ Đang ghi hình...";
             recordBtn.classList.add('recording');
             recordBtn.disabled = true;
-
-            // Tự động dừng sau 3 giây (3000ms)
             setTimeout(() => { mediaRecorder.stop(); }, 3000);
         });
 
-        // --- 4. HÀM GỬI DATA LÊN DJANGO (Dùng chung cho cả 2 Tab) ---
+        // --- 4. HÀM GỬI DATA LÊN DJANGO ---
         function sendVideoToServer(file) {
             resultText.style.color = "#f39c12";
-            resultText.innerText = "⏳ Đang phân tích, vui lòng đợi...";
+            resultText.innerText   = "⏳ Đang phân tích, vui lòng đợi...";
+            resultMeta.innerText   = "";
+            top3Table.style.display = 'none';
 
             const formData = new FormData();
             formData.append('video_file', file);
             formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 
-            fetch('/', {
-                method: 'POST',
-                body: formData
-            })
+            fetch('/', { method: 'POST', body: formData })
             .then(response => response.json())
             .then(data => {
-                if(data.status === 'success') {
+                if (data.status === 'success') {
                     resultText.style.color = "#27ae60";
-                    resultText.innerText = `Kết quả: ${data.result}`;
+                    resultText.innerText   = `Kết quả: ${data.result}`;
+
+                    const conf  = data.confidence != null ? ` (${data.confidence}%)` : '';
+                    const model = data.model ? ` · ${data.model}` : '';
+                    resultMeta.innerText = `Độ tin cậy${conf}${model}`;
+
+                    if (data.top3 && data.top3.length > 1) {
+                        // Rebuild top-3 rows
+                        const rows = top3Table.querySelectorAll('tr:not(:first-child)');
+                        rows.forEach(r => r.remove());
+                        data.top3.forEach(item => {
+                            const tr = document.createElement('tr');
+                            const barWidth = Math.round(item.prob);
+                            tr.innerHTML = `<td>${item.label}</td><td>${item.prob}%</td>`
+                                + `<td><span class="prob-bar" style="width:${barWidth}px"></span></td>`;
+                            top3Table.appendChild(tr);
+                        });
+                        top3Table.style.display = 'table';
+                    }
                 } else {
                     resultText.style.color = "#c0392b";
-                    resultText.innerText = `Lỗi: ${data.message}`;
+                    resultText.innerText   = `Lỗi: ${data.message}`;
+                    resultMeta.innerText   = "";
                 }
             })
             .catch(error => {
                 console.error('Lỗi:', error);
                 resultText.style.color = "#c0392b";
-                resultText.innerText = "Lỗi kết nối đến server!";
+                resultText.innerText   = "Lỗi kết nối đến server!";
             });
         }
     </script>
