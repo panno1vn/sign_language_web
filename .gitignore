@@ -24,6 +24,7 @@ venv/
 *.iml
 
 # Model weights (downloaded separately — not tracked in git)
+models/wlasl/*.pt
 models/wlasl/*.pth
 models/wlasl/*.pth.tar
 models/*.h5
