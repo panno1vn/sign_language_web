@@ -27,16 +27,27 @@ try:
     from translator.wlasl_model import load_wlasl_model, load_class_list, predict_wlasl
 
     if os.path.isdir(WLASL_WEIGHTS_DIR):
+        # Search recursively so users can drop a whole subfolder (e.g. asl100/)
+        # into models/wlasl/ without manually flattening the archive structure.
+        _all_weights = []
+        for _root, _dirs, _files in os.walk(WLASL_WEIGHTS_DIR):
+            for _f in _files:
+                if _f.endswith('.pth.tar') or _f.endswith('.pth'):
+                    _all_weights.append(os.path.join(_root, _f))
+        # Sort by the leading integer in the filename (ascending) so the
+        # smallest-class checkpoint (e.g. nslt_100) is preferred over larger
+        # variants (nslt_300, nslt_1000).  Files with no digits sort first (0).
         _candidates = sorted(
-            [f for f in os.listdir(WLASL_WEIGHTS_DIR) if f.endswith('.pth.tar') or f.endswith('.pth')],
-            key=lambda f: int(''.join(filter(str.isdigit, f)) or '0')
+            _all_weights,
+            key=lambda p: int(''.join(filter(str.isdigit, os.path.basename(p))) or '0')
         )
         if _candidates:
-            _weights_path = os.path.join(WLASL_WEIGHTS_DIR, _candidates[0])
+            _weights_path = _candidates[0]
+            _weights_name = os.path.relpath(_weights_path, WLASL_WEIGHTS_DIR)
             WLASL_LABELS = load_class_list(WLASL_CLASS_LIST_PATH)
             WLASL_MODEL = load_wlasl_model(_weights_path, num_classes=len(WLASL_LABELS))
             ACTIVE_MODEL = 'wlasl'
-            print(f"[INFO] WLASL I3D model loaded: {_candidates[0]}  ({len(WLASL_LABELS)} classes)")
+            print(f"[INFO] WLASL I3D model loaded: {_weights_name}  ({len(WLASL_LABELS)} classes)")
         else:
             print("[INFO] No WLASL weights found in models/wlasl/ — falling back to local model.")
     else:
