@@ -13,6 +13,37 @@ Web app Django nhận dạng ngôn ngữ ký hiệu Mỹ (ASL) từ video camera
 
 ---
 
+## 🔄 Tắt server và tải lại (restart)
+
+### Tắt server đang chạy
+
+Trong cửa sổ terminal đang chạy `runserver`, nhấn:
+
+```
+Ctrl + C
+```
+
+Server sẽ dừng ngay lập tức.
+
+### Pull code mới về rồi khởi động lại
+
+Mỗi khi có cập nhật trên GitHub, làm theo 3 bước sau:
+
+```bash
+# 1. Tắt server trước (nhấn Ctrl+C trong terminal đang chạy server)
+
+# 2. Kéo code mới nhất về
+git pull
+
+# 3. Khởi động lại server
+python manage.py runserver
+```
+
+> **Ghi chú:** `python manage.py runserver` tự động reload khi bạn chỉnh sửa file `.py`.  
+> Bạn chỉ cần `git pull` + restart thủ công khi muốn lấy commit mới từ GitHub về.
+
+---
+
 ## ⬇️ Tải / Cập nhật code mới nhất
 
 ### Lần đầu — chưa có code trên máy
