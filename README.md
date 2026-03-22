@@ -76,9 +76,11 @@ pip install -r requirements.txt
 
 3. Sao chép **cả thư mục `asl100`** vào `models/wlasl/` trong repo — hoặc chỉ copy file `.pth.tar` bên trong nó:
 
+   > ⭐ **Nếu bạn thấy nhiều file trong thư mục `asl100`:** chỉ cần copy file có đuôi **`.pth.tar`** (ví dụ: `nslt_100.pth.tar`). Các file khác (`.json`, optimizer state, v.v.) không cần thiết — app chỉ đọc file `.pth.tar`.
+
    **Windows (PowerShell):**
    ```powershell
-   # Copy cả thư mục con (cách đơn giản nhất)
+   # Copy cả thư mục con (cách đơn giản nhất — app tự bỏ qua file không cần thiết)
    xcopy /E /I "C:\Users\Admin\Downloads\archived\archived\asl100" "models\wlasl\asl100"
 
    # Hoặc chỉ copy 1 file .pth.tar vào thẳng models\wlasl\
@@ -87,7 +89,7 @@ pip install -r requirements.txt
 
    **Linux / macOS:**
    ```bash
-   # Copy cả thư mục con
+   # Copy cả thư mục con (cách đơn giản nhất)
    cp -r ~/Downloads/archived/archived/asl100 models/wlasl/
 
    # Hoặc chỉ copy 1 file .pth.tar
