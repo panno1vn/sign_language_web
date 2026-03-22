@@ -200,9 +200,18 @@
                         rows.forEach(r => r.remove());
                         data.top3.forEach(item => {
                             const tr = document.createElement('tr');
-                            const barWidth = Math.round(item.prob);
-                            tr.innerHTML = `<td>${item.label}</td><td>${item.prob}%</td>`
-                                + `<td><span class="prob-bar" style="width:${barWidth}px"></span></td>`;
+                            const tdLabel = document.createElement('td');
+                            const tdProb  = document.createElement('td');
+                            const tdBar   = document.createElement('td');
+                            const bar     = document.createElement('span');
+                            tdLabel.textContent = item.label;
+                            tdProb.textContent  = item.prob + '%';
+                            bar.className = 'prob-bar';
+                            bar.style.width = Math.round(item.prob) + 'px';
+                            tdBar.appendChild(bar);
+                            tr.appendChild(tdLabel);
+                            tr.appendChild(tdProb);
+                            tr.appendChild(tdBar);
                             top3Table.appendChild(tr);
                         });
                         top3Table.style.display = 'table';

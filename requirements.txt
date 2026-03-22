@@ -3,5 +3,5 @@ tensorflow
 opencv-python-headless
 mediapipe==0.10.7
 numpy
-torch
-torchvision
+torch>=2.0.0
+torchvision>=0.15.0

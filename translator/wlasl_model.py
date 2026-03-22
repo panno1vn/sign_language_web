@@ -156,82 +156,98 @@ class InceptionI3d(nn.Module):
                                             stride=(2, 2, 2), padding=(3, 3, 3),
                                             name=name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'MaxPool3d_2a_3x3'
         self.end_points[end_point] = MaxPool3dSamePadding([1, 3, 3], stride=(1, 2, 2), padding=0)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Conv3d_2b_1x1'
         self.end_points[end_point] = Unit3D(64, 64, [1, 1, 1], padding=0, name=name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Conv3d_2c_3x3'
         self.end_points[end_point] = Unit3D(64, 192, [3, 3, 3], padding=1, name=name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'MaxPool3d_3a_3x3'
         self.end_points[end_point] = MaxPool3dSamePadding([1, 3, 3], stride=(1, 2, 2), padding=0)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Mixed_3b'
         self.end_points[end_point] = InceptionModule(192, [64, 96, 128, 16, 32, 32], name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Mixed_3c'
         self.end_points[end_point] = InceptionModule(256, [128, 128, 192, 32, 96, 64], name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'MaxPool3d_4a_3x3'
         self.end_points[end_point] = MaxPool3dSamePadding([3, 3, 3], stride=(2, 2, 2), padding=0)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Mixed_4b'
         self.end_points[end_point] = InceptionModule(480, [192, 96, 208, 16, 48, 64], name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Mixed_4c'
         self.end_points[end_point] = InceptionModule(512, [160, 112, 224, 24, 64, 64], name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Mixed_4d'
         self.end_points[end_point] = InceptionModule(512, [128, 128, 256, 24, 64, 64], name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Mixed_4e'
         self.end_points[end_point] = InceptionModule(512, [112, 144, 288, 32, 64, 64], name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Mixed_4f'
         self.end_points[end_point] = InceptionModule(528, [256, 160, 320, 32, 128, 128], name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'MaxPool3d_5a_2x2'
         self.end_points[end_point] = MaxPool3dSamePadding([2, 2, 2], stride=(2, 2, 2), padding=0)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Mixed_5b'
         self.end_points[end_point] = InceptionModule(832, [256, 160, 320, 32, 128, 128], name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Mixed_5c'
         self.end_points[end_point] = InceptionModule(832, [384, 192, 384, 48, 128, 128], name + end_point)
         if self._final_endpoint == end_point:
-            self.build(); return
+            self.build()
+            return
 
         end_point = 'Logits'
         self.avg_pool = nn.AvgPool3d(kernel_size=[2, 7, 7], stride=(1, 1, 1))
@@ -295,7 +311,7 @@ def load_rgb_frames(video_path, num_frames=64):
         return None
 
     arr = np.array(frames, dtype=np.float32) / 255.0
-    arr = (arr - 0.5) / 0.5  # → [-1, 1]
+    arr = (arr - 0.5) / 0.5  # Normalize from [0, 1] to [-1, 1]
 
     while len(arr) < num_frames:
         arr = np.concatenate([arr, arr[-1:]], axis=0)
