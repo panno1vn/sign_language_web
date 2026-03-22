@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Django
+*.sqlite3
+/staticfiles/
+/media/
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Model weights (downloaded separately — not tracked in git)
+models/wlasl/*.pth
+models/wlasl/*.pth.tar
+models/*.h5
+
+# OS
+.DS_Store
+Thumbs.db
