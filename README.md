@@ -262,3 +262,35 @@ Mo:
 - Dong bo hoan toan mot cau hinh duy nhat cho feature (uu tien 1659 hoac 225) de tranh lech train/infer.
 - Them script train ro rang (vi du `04_training/train.py`) va luu lich su metric.
 - Them danh gia offline tren tap validation/test rieng cho ca hai model (TensorFlow va I3D).
+
+## 10. Danh sach file lon khong the up len GitHub
+
+GitHub gioi han 100MB/file (voi git thong thuong). Cac file duoi day hien tai vuot nguong nay.
+
+### 10.1. File du lieu/model nen up Google Drive
+
+| STT | File | Kich thuoc (MB) | Link Drive |
+|---|---|---:|---|
+| 1 | `data/raw/landmarks_V3.npz` | 8508.65 | TODO: dan link |
+| 2 | `data/raw/landmarks_V1.npz` | 2596.33 | TODO: dan link |
+| 3 | `data/raw/landmarks_V2.npz` | 2574.93 | TODO: dan link |
+| 4 | `data/processed/MASTER_DATASET.npz` | 366.12 | TODO: dan link |
+| 5 | `data/processed/X.npy` | 270.36 | TODO: dan link |
+| 6 | `data/processed/WLASL_filtered_15plus.npz` | 266.18 | TODO: dan link |
+
+### 10.2. File lon thuoc moi truong ao (khong can up Drive)
+
+Nhung file nay thuoc thu muc `venv/.venv`, co the tai lai bang `pip install`, khong nen dua len GitHub hoac Drive.
+
+| STT | File | Kich thuoc (MB) | Ghi chu |
+|---|---|---:|---|
+| 1 | `sign_language_web/venv/Lib/site-packages/tensorflow/python/_pywrap_tensorflow_common.dll` | 1007.68 | Tu dong sinh khi cai TensorFlow |
+| 2 | `.venv/Lib/site-packages/tensorflow/python/_pywrap_tensorflow_internal.pyd` | 697.64 | Tu dong sinh khi cai TensorFlow |
+| 3 | `sign_language_web/venv/Lib/site-packages/torch/lib/torch_cpu.dll` | 252.67 | Tu dong sinh khi cai PyTorch |
+
+### 10.3. Mau cach dan link Drive vao README
+
+Ban thay cot `TODO: dan link` bang markdown link, vi du:
+
+`[Tai file](https://drive.google.com/...)`
+
