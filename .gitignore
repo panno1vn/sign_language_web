@@ -1,0 +1,32 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+sign_language_web/venv/
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Large raw/processed data (too large for regular GitHub push)
+data/raw/
+data/processed/
+dataset_landmarks/
+
+# Generated idle/custom data
+data/idle_npy/
+data/custom_videos/
+
+# Database and local runtime artifacts
+*.sqlite3
+*.log
+
+# Keep model weights optional; uncomment if push fails due size
+# *.h5
+# *.pt
+# *.pth

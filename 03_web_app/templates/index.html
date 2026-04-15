@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MuteMotion AI - Web Realtime</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #1e1e1e; color: white; margin-top: 30px; }
+        h1 { color: #00d2ff; }
+        .video-container { 
+            border: 5px solid #333; border-radius: 10px; display: inline-block; 
+            overflow: hidden; box-shadow: 0 0 20px rgba(0, 210, 255, 0.5); 
+            width: 640px; height: 480px; background-color: #000; margin-top: 15px;
+        }
+        /* Ẩn khung ảnh trước khi luồng video được khởi tạo. */
+        img { display: none; width: 100%; height: 100%; object-fit: cover; }
+        
+        .btn {
+            padding: 12px 25px; font-size: 18px; font-weight: bold; border: none; 
+            border-radius: 5px; cursor: pointer; margin: 0 10px; transition: 0.3s;
+        }
+        .btn-start { background-color: #28a745; color: white; }
+        .btn-start:hover { background-color: #218838; box-shadow: 0 0 15px #28a745; }
+        .btn-stop { background-color: #dc3545; color: white; }
+        .btn-stop:hover { background-color: #c82333; box-shadow: 0 0 15px #dc3545; }
+        .btn:disabled { background-color: #555; cursor: not-allowed; box-shadow: none; color: #888; }
+        
+        /* Khu vực hiển thị từ dự đoán hiện tại. */
+        .result-box {
+            margin-top: 20px; font-size: 35px; font-weight: bold; color: #00ff88;
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+        .sentence-box {
+            margin: 14px auto 0; width: 640px; text-align: left;
+            background: #161616; border: 1px solid #2f2f2f; border-radius: 10px;
+            padding: 12px 14px; color: #f2f2f2; font-size: 18px; line-height: 1.5;
+            min-height: 48px;
+        }
+        .upload-box {
+            margin: 14px auto 0; width: 640px; text-align: left;
+            background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 10px; padding: 14px;
+        }
+        .upload-box h3 { margin: 0 0 8px; color: #ffdb70; font-size: 18px; }
+        .upload-row { display: flex; gap: 10px; align-items: center; }
+        .upload-row input[type="file"] { flex: 1; color: #ddd; }
+        .upload-result {
+            margin-top: 10px; color: #d4f7ff; font-size: 15px; line-height: 1.5;
+            max-height: 180px; overflow: auto; white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎙️ MuteMotion AI</h1>
+    
+    <div>
+        <button id="startBtn" class="btn btn-start" onclick="toggleCamera(true)">▶ Bắt đầu quay</button>
+        <button id="stopBtn" class="btn btn-stop" onclick="toggleCamera(false)" disabled>⏹ Dừng lại</button>
+    </div>
+
+    <div class="upload-box">
+        <h3>Test bằng Video Upload</h3>
+        <div class="upload-row">
+            <input id="videoFileInput" type="file" accept=".mp4,.avi,.mov,.mkv,.webm">
+            <button id="uploadBtn" class="btn btn-start" onclick="uploadVideoForTest()">Tải lên & Dự đoán</button>
+        </div>
+        <div id="uploadResult" class="upload-result">Chưa có kết quả.</div>
+    </div>
+    
+    <div class="video-container">
+        <img id="videoStream" src="" alt="Camera Feed">
+    </div>
+
+    <div class="result-box" id="predictionText">SẴN SÀNG</div>
+    <div class="sentence-box" id="sentenceText">Chuỗi văn bản: (chưa có từ)</div>
+
+    <script>
+        let fetchInterval = null;
+
+        function clearPolling() {
+            if (fetchInterval !== null) {
+                clearInterval(fetchInterval);
+                fetchInterval = null;
+            }
+        }
+
+        function setUiRunning(running) {
+            document.getElementById('startBtn').disabled = running;
+            document.getElementById('stopBtn').disabled = !running;
+            document.getElementById('videoStream').style.display = running ? 'block' : 'none';
+        }
+
+        function startPredictionPolling() {
+            clearPolling();
+            fetchInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/get_action');
+                    if (!response.ok) {
+                        throw new Error('Không đọc được trạng thái AI');
+                    }
+                    const data = await response.json();
+
+                    if (data.error) {
+                        document.getElementById('predictionText').innerText = data.error;
+                        return;
+                    }
+
+                    if (typeof data.action === 'string' && data.action.length > 0) {
+                        document.getElementById('predictionText').innerText = data.action;
+                    }
+
+                    if (typeof data.sentence === 'string') {
+                        document.getElementById('sentenceText').innerText =
+                            data.sentence.length > 0 ? `Chuỗi văn bản: ${data.sentence}` : 'Chuỗi văn bản: (chưa có từ)';
+                    }
+                } catch (error) {
+                    document.getElementById('predictionText').innerText = 'Mất kết nối tới server';
+                }
+            }, 300);
+        }
+
+        async function toggleCamera(isStarting) {
+            try {
+                const response = await fetch('/toggle', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: isStarting ? 'start' : 'stop'})
+                });
+
+                const data = await response.json();
+                if (!response.ok || data.status !== 'success') {
+                    throw new Error(data.message || 'Toggle camera thất bại');
+                }
+
+                if (isStarting) {
+                    document.getElementById('predictionText').innerText = 'Đang tải Camera...';
+                    document.getElementById('sentenceText').innerText = 'Chuỗi văn bản: (đang thu...)';
+                    document.getElementById('videoStream').src = '/video_feed?' + Date.now();
+                    setUiRunning(true);
+                    startPredictionPolling();
+                } else {
+                    clearPolling();
+                    document.getElementById('videoStream').src = '';
+                    setUiRunning(false);
+                    document.getElementById('predictionText').innerText = 'ĐÃ DỪNG';
+                    document.getElementById('sentenceText').innerText = 'Chuỗi văn bản: (đã dừng)';
+                }
+            } catch (error) {
+                clearPolling();
+                document.getElementById('videoStream').src = '';
+                setUiRunning(false);
+                document.getElementById('predictionText').innerText = error.message || 'Không thể mở camera';
+            }
+        }
+
+        document.getElementById('videoStream').addEventListener('error', () => {
+            document.getElementById('predictionText').innerText = 'Luồng video lỗi hoặc camera không khả dụng';
+        });
+
+        window.addEventListener('beforeunload', () => {
+            clearPolling();
+        });
+
+        async function uploadVideoForTest() {
+            const fileInput = document.getElementById('videoFileInput');
+            const resultBox = document.getElementById('uploadResult');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                resultBox.innerText = 'Vui lòng chọn file video trước.';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('video', fileInput.files[0]);
+
+            uploadBtn.disabled = true;
+            resultBox.innerText = 'Đang tải lên và phân tích video...';
+
+            try {
+                const response = await fetch('/upload_video', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (!response.ok || data.status !== 'success') {
+                    throw new Error(data.message || 'Upload thất bại');
+                }
+
+                let text = '';
+                text += `Kết quả cuối: ${data.final_action}\n`;
+                text += `Độ tin cậy: ${(Number(data.final_confidence) * 100).toFixed(1)}%\n`;
+                text += `Thời lượng xử lý: ${data.duration_sec}s\n`;
+
+                if (Array.isArray(data.top_actions) && data.top_actions.length > 0) {
+                    text += '\nTop action:\n';
+                    data.top_actions.forEach((item, idx) => {
+                        text += `${idx + 1}. ${item.action} | score=${item.score} | count=${item.count}\n`;
+                    });
+                }
+
+                if (Array.isArray(data.samples) && data.samples.length > 0) {
+                    text += '\nMẫu theo thời gian:\n';
+                    data.samples.slice(0, 12).forEach((item) => {
+                        text += `t=${item.time_sec}s -> ${item.action} (${(Number(item.confidence) * 100).toFixed(1)}%)\n`;
+                    });
+                }
+
+                resultBox.innerText = text;
+            } catch (error) {
+                resultBox.innerText = error.message || 'Không thể phân tích video';
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        }
+    </script>
+
+</body>
+</html>
