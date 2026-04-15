@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Dịch Ngôn Ngữ Ký Hiệu AI</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 650px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; margin-bottom: 20px; }
+
+        /* CSS cho 2 nút Tab */
+        .tab-container { display: flex; justify-content: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .tab-btn { background: none; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; color: #7f8c8d; cursor: pointer; transition: 0.3s; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: #007bff; border-bottom: 3px solid #007bff; }
+        .tab-btn:hover { color: #0056b3; }
+
+        /* Nội dung các Tab */
+        .tab-content { display: none; padding: 20px 0; }
+        .tab-content.active { display: block; }
+
+        /* Camera & Video box */
+        video { width: 100%; max-width: 500px; border-radius: 8px; background: #000; transform: scaleX(-1); } /* Lật gương camera */
+        .upload-box { padding: 30px; border: 2px dashed #007bff; border-radius: 8px; background: #f8fbff; }
+
+        /* Nút bấm chung */
+        button.action-btn { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; transition: 0.3s; margin-top: 15px;}
+        button.action-btn:hover { background: #0056b3; }
+        button.action-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
+        button#recordBtn.recording { background: #e74c3c; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        #resultText { color: #27ae60; font-size: 28px; margin-top: 30px; min-height: 40px; font-weight: bold;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Phần Mềm Dịch Ngôn Ngữ Ký Hiệu</h1>
+
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('cameraTab', this)">📹 Dùng Camera</button>
+            <button class="tab-btn" onclick="switchTab('uploadTab', this)">📁 Tải Video</button>
+        </div>
+
+        <div id="cameraTab" class="tab-content active">
+            <video id="webcam" autoplay playsinline></video>
+            <br>
+            <button id="recordBtn" class="action-btn">🔴 Bắt đầu múa (Ghi 3 giây)</button>
+        </div>
+
+        <div id="uploadTab" class="tab-content">
+            <div class="upload-box">
+                <input type="file" id="videoInput" accept="video/mp4, video/webm, video/avi">
+                <br>
+                <button id="uploadBtn" class="action-btn">🚀 Dịch Video Tải Lên</button>
+            </div>
+        </div>
+
+        <h2 id="resultText">Hãy múa hoặc tải video lên!</h2>
+    </div>
+
+    <script>
+        // --- 1. LOGIC CHUYỂN TAB ---
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        const resultText = document.getElementById('resultText');
+
+        // --- 2. LOGIC TẢI VIDEO LÊN (Giữ nguyên) ---
+        const uploadBtn = document.getElementById('uploadBtn');
+        const videoInput = document.getElementById('videoInput');
+
+        uploadBtn.addEventListener('click', () => {
+            const file = videoInput.files[0];
+            if (!file) { alert("Vui lòng chọn một video!"); return; }
+            sendVideoToServer(file);
+        });
+
+        // --- 3. LOGIC QUAY CAMERA ---
+        const webcam = document.getElementById('webcam');
+        const recordBtn = document.getElementById('recordBtn');
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        // Khởi động Camera ngay khi vào trang
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { webcam.srcObject = stream; })
+            .catch(err => { console.error("Lỗi mở camera:", err); alert("Không thể mở Camera!"); });
+
+        recordBtn.addEventListener('click', () => {
+            if (recordBtn.disabled) return;
+
+            recordedChunks = [];
+            const stream = webcam.srcObject;
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+            mediaRecorder.ondataavailable = event => {
+                if (event.data.size > 0) recordedChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                // Tạo file từ video vừa quay
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const file = new File([blob], "camera_record.webm", { type: 'video/webm' });
+
+                // Gửi lên server y như tải file
+                sendVideoToServer(file);
+
+                // Reset giao diện nút bấm
+                recordBtn.innerText = "🔴 Bắt đầu múa (Ghi 3 giây)";
+                recordBtn.classList.remove('recording');
+                recordBtn.disabled = false;
+            };
+
+            // Bắt đầu ghi hình
+            mediaRecorder.start();
+            recordBtn.innerText = "⏳ Đang ghi hình...";
+            recordBtn.classList.add('recording');
+            recordBtn.disabled = true;
+
+            // Tự động dừng sau 3 giây (3000ms)
+            setTimeout(() => { mediaRecorder.stop(); }, 3000);
+        });
+
+        // --- 4. HÀM GỬI DATA LÊN DJANGO (Dùng chung cho cả 2 Tab) ---
+        function sendVideoToServer(file) {
+            resultText.style.color = "#f39c12";
+            resultText.innerText = "⏳ Đang phân tích, vui lòng đợi...";
+
+            const formData = new FormData();
+            formData.append('video_file', file);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch('/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    resultText.style.color = "#27ae60";
+                    resultText.innerText = `Kết quả: ${data.result}`;
+                } else {
+                    resultText.style.color = "#c0392b";
+                    resultText.innerText = `Lỗi: ${data.message}`;
+                }
+            })
+            .catch(error => {
+                console.error('Lỗi:', error);
+                resultText.style.color = "#c0392b";
+                resultText.innerText = "Lỗi kết nối đến server!";
+            });
+        }
+    </script>
+</body>
+</html>
